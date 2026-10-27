@@ -79,6 +79,13 @@ def validate_candles(symbol: str, rows: list[list[Any]]) -> list[dict[str, Any]]
     return candles
 
 
+def run_self_test() -> None:
+    validated = {symbol: validate_candles(symbol, rows) for symbol, rows in OFFLINE_KLINES.items()}
+    assert sorted(validated) == ["BTCUSDT", "ETHUSDT"]
+    assert all(len(candles) == 3 for candles in validated.values())
+    print("market_data_ohlcv_validator_ok")
+
+
 def fetch_binance_klines(symbol: str, limit: int) -> list[list[Any]]:
     query = urllib.parse.urlencode({"symbol": symbol, "interval": "1d", "limit": limit})
     url = f"https://api.binance.com/api/v3/klines?{query}"
@@ -89,10 +96,15 @@ def fetch_binance_klines(symbol: str, limit: int) -> list[list[Any]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate a small BTC/ETH OHLCV sample.")
+    parser.add_argument("--self-test", action="store_true", help="Validate the bundled offline BTC/ETH sample.")
     parser.add_argument("--offline", action="store_true", help="Use bundled sample candles instead of live public API data.")
     parser.add_argument("--symbols", default="BTCUSDT,ETHUSDT", help="Comma-separated symbols for live mode.")
     parser.add_argument("--limit", type=int, default=3, help="Number of daily candles per symbol in live mode.")
     args = parser.parse_args()
+
+    if args.self_test:
+        run_self_test()
+        return
 
     symbols = [item.strip().upper() for item in args.symbols.split(",") if item.strip()]
     source = "offline-sample" if args.offline else "binance-public-api"
